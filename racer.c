@@ -3,6 +3,8 @@
 /// Created: 12/5/2016
 /// Implementation of the racer.h file. This program will handle the construction of the racers.
 
+#define _BSD_SOURCE
+#include <unistd.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -10,10 +12,13 @@
 #include "racer.h"
 #include "display.h"
 
-int MAX_DELAY
+static long MAX_DELAY;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static int sleep_flag = 1;
 
 void initRacers( long milliseconds ) {
 	MAX_DELAY = milliseconds;
+	srand( time( NULL ) );
 }
 
 Racer * makeRacer( char * name, int position ) {
@@ -42,15 +47,38 @@ void destroyRacer( Racer * racer ) {
 }
 
 void * run( void * racer ) {
-	Racer * driver = (Racer *)racer;
-	printf( "%s\n", driver->graphic );
-	while ( racer->dist != FINISH_LINE ) {
-		int delay = rand() % MAX_DELAY;
+	Racer * driver = (Racer *)racer;	
+	
+	while ( driver->dist <= FINISH_LINE ) {
+		
+		int delay = ( rand() % MAX_DELAY );
 		if ( delay <= 3 ) {
-			racer->graphic[1] = 'X';
+			driver->graphic[1] = 'X';
+			pthread_mutex_lock( &mutex );
+			set_cur_pos( driver->row, 0 );
+			int j = 0;
+			while ( j < driver->dist ) {
+				put( ' ' );
+				j++;
+			}
+			printf( "%s", driver->graphic );
+			pthread_mutex_unlock( &mutex );
 			break;
 		}
-		usleep( delay );
-		racer->dist++;		
+		usleep( delay * 1000 );
+
+		pthread_mutex_lock( &mutex );
+		set_cur_pos( driver->row, 0 );
+		int i = 0;
+		while ( i < driver->dist ) {
+			put( ' ' );
+			i++;
+		}
+		printf( "%s", driver->graphic );
+		pthread_mutex_unlock( &mutex );	
+	
+		driver->dist++;
 	}
+	//destroyRacer( racer );
+	return;
 }
