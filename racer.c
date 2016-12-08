@@ -14,7 +14,6 @@
 
 static long MAX_DELAY;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-static int sleep_flag = 1;
 
 void initRacers( long milliseconds ) {
 	MAX_DELAY = milliseconds;
@@ -23,11 +22,14 @@ void initRacers( long milliseconds ) {
 
 Racer * makeRacer( char * name, int position ) {
 	Racer * racer = malloc( sizeof( Racer ) );
-	char * buff = malloc( MAX_CAR_LEN );
+
+	char * buff;
+	buff = malloc( MAX_CAR_LEN+1 );
+	buff[ MAX_CAR_LEN ] = '\0';
 	buff[0] = '~';
 	buff[1] = 'O';
 	buff[2] = '=';
-	strcat( buff, name );
+	strncpy( buff+3, name, MAX_NAME_LEN+1 );
 	for ( int i = 3; i <= 9; i++ ) {
 		if ( buff[i] == '\0' ) {
 			buff[i] = '-';
@@ -38,6 +40,7 @@ Racer * makeRacer( char * name, int position ) {
 	racer->graphic = buff;
 	racer->row = position;
 	racer->dist = 0;
+
 	return racer;
 }
 
@@ -50,23 +53,6 @@ void * run( void * racer ) {
 	Racer * driver = (Racer *)racer;	
 	
 	while ( driver->dist <= FINISH_LINE ) {
-		
-		int delay = ( rand() % MAX_DELAY );
-		if ( delay <= 3 ) {
-			driver->graphic[1] = 'X';
-			pthread_mutex_lock( &mutex );
-			set_cur_pos( driver->row, 0 );
-			int j = 0;
-			while ( j < driver->dist ) {
-				put( ' ' );
-				j++;
-			}
-			printf( "%s", driver->graphic );
-			pthread_mutex_unlock( &mutex );
-			break;
-		}
-		usleep( delay * 1000 );
-
 		pthread_mutex_lock( &mutex );
 		set_cur_pos( driver->row, 0 );
 		int i = 0;
@@ -74,11 +60,20 @@ void * run( void * racer ) {
 			put( ' ' );
 			i++;
 		}
-		printf( "%s", driver->graphic );
+		for ( size_t i = 0; i < MAX_CAR_LEN; i++ ) {
+			put( driver->graphic[i] );
+		}
 		pthread_mutex_unlock( &mutex );	
+
+		if ( driver->graphic[1] == 'X' ) break;
 	
 		driver->dist++;
+		int delay = ( rand() % MAX_DELAY );
+		if ( delay <= 3 ) {
+			driver->graphic[1] = 'X';
+		}
+		usleep( delay * 1000 );
 	}
-	//destroyRacer( racer );
-	return;
+	//destroyRacer( driver );
+	return 0;
 }
