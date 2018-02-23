@@ -74,6 +74,5 @@ void * run( void * racer ) {
 		}
 		usleep( delay * 1000 );
 	}
-	//destroyRacer( driver );
 	return 0;
 }
